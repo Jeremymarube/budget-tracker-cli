@@ -1,0 +1,29 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+.venv/
+venv/
+
+# Database file
+budget.db
+
+# Logs
+*.log
+
+# Alembic / Migrations
+migrations/script.py.mako
+migrations/versions/*.pyc
+migrations/versions/__pycache__/
+
+# IDE / editor configs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
