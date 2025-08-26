@@ -18,7 +18,7 @@ def register():
     user = User(username=username, password=password)
     session.add(user)
     session.commit()
-    print(f"✅ User {username} registered!")
+    print(f"User {username} registered!")
 
 def login():
     username = input("Username: ")
@@ -52,7 +52,7 @@ def add_transaction(user):
         print("Invalid amount. Enter a number without $ sign.")
         return
 
-    # Show existing categories
+    # Showing existing categories
     print("Available categories:")
     categories = session.query(Category).all()
     for cat in categories:
@@ -71,13 +71,13 @@ def add_transaction(user):
 
     expense = Expense(
         amount=amount,
-        transaction_type=type_,  # column name in Expense
+        transaction_type=type_, 
         category=category,
         user=user
     )
     session.add(expense)
     session.commit()
-    print("✅ Transaction added!")
+    print("Transaction added!")
 
 def view_balance(user):
     income = session.query(Expense).filter_by(user=user, transaction_type="income").all()
