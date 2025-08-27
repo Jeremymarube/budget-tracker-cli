@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, Float, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, Float, String, ForeignKey, Date
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import date
 from lib.models import Base  
 
 class Expense(Base):
@@ -11,7 +11,7 @@ class Expense(Base):
     transaction_type = Column(String, nullable=False)
     category_id = Column(Integer, ForeignKey("categories.id"))
     user_id = Column(Integer, ForeignKey("users.id"))
-    date = Column(DateTime, default=datetime.now)  # <-- default current datetime
+    date = Column(Date, default=date.today)
 
     category = relationship("Category", back_populates="expenses")
-    user = relationship("User", back_populates="expenses")
+    user = relationship("User", back_populates="expenses") 

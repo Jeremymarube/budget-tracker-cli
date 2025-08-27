@@ -3,7 +3,6 @@ import os
 from datetime import datetime
 import bcrypt
 
-
 # Am Adding project root so "lib" is recognized
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -12,6 +11,38 @@ from lib.models.expense import Expense
 from lib.models.category import Category
 from lib.models.user import User
 
+# DECORATORS
+def require_login(func):
+    def wrapper(user, *args, **kwargs):
+        if not user:
+            print("You must be logged in first!")
+            return None
+        return func(user, *args, **kwargs)
+    return wrapper
+
+
+def safe_action(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            session.rollback()
+            print(f"An error occurred: {e}")
+            return None
+    return wrapper
+
+
+
+def log_action(func):
+    def wrapper(*args, **kwargs):
+        print("running...")
+        return func(*args, **kwargs)
+    return wrapper
+
+
+# FUNCTIONS
+
+@safe_action
 def register():
     username = input("Choose a username: ").strip()
     
@@ -32,23 +63,17 @@ def register():
         else:
             break
 
-    
     hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
     # Create user
     user = User(username=username, password=hashed_pw)
-    
-    try:
-        session.add(user)
-        session.commit()
-        print(f"User {username} registered successfully!")
-        return user
-    except Exception as e:
-        session.rollback()
-        print(f"Error creating user: {e}")
-        return None
+    session.add(user)
+    session.commit()
+    print(f"User {username} registered successfully!")
+    return user
 
 
+@safe_action
 def login():
     username = input("Username: ").strip()
     password = input("Password: ").strip()
@@ -58,13 +83,16 @@ def login():
     
     # Checking password against hashed value
     if user and bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
-        print(f"\nHello {username}, welcome!\n")
+        print(f"\nHello {username}, welcome back!\n")
         return user
     else:
         print("Invalid credentials!")
         return None
 
 
+@require_login
+@log_action
+@safe_action
 def add_transaction(user):
     categories = session.query(Category).all()
     if not categories:
@@ -119,6 +147,8 @@ def add_transaction(user):
     print(f"{type_.capitalize()} transaction added successfully!")
 
 
+@require_login
+@log_action
 def view_balance(user):
     income_total = sum(exp.amount for exp in user.expenses if exp.transaction_type == "income")
     expense_total = sum(exp.amount for exp in user.expenses if exp.transaction_type == "expense")
@@ -126,36 +156,52 @@ def view_balance(user):
     print(f"\nYour current balance: ${balance:.2f}")
     print(f"   Total Income: ${income_total:.2f}, Total Expenses: ${expense_total:.2f}")
 
+
+@require_login
+@log_action
+@log_action
+
+@log_action
 def spending_report(user):
-    expenses = [exp for exp in user.expenses if exp.transaction_type == "expense"]
-    if not expenses:
-        print("No expense transactions found.")
-        return
+    print("Filter by date? (y/n): ", end="")
+    choice = input().strip().lower()
 
-    filter_choice = input("Filter by date? (y/n): ").strip().lower()
-    if filter_choice == "y":
-        start_date = input("Start date (YYYY-MM-DD): ").strip()
-        end_date = input("End date (YYYY-MM-DD): ").strip()
+    expenses = user.expenses  
+
+    if choice == "y":
         try:
-            start = datetime.strptime(start_date, "%Y-%m-%d")
-            end = datetime.strptime(end_date, "%Y-%m-%d")
-            expenses = [e for e in expenses if start <= e.date <= end]
-        except ValueError:
-            print("Invalid date format. Showing all transactions.")
+            start_str = input("Start date (YYYY-MM-DD): ")
+            end_str = input("End date (YYYY-MM-DD): ")
+
+            start = datetime.strptime(start_str, "%Y-%m-%d").date()
+            end = datetime.strptime(end_str, "%Y-%m-%d").date()
+
+            #  Safely handlig datetime or date
+            expenses = [
+                e for e in expenses
+                if start <= (e.date.date() if isinstance(e.date, datetime) else e.date) <= end
+            ]
+
+        except Exception as e:
+            print(f"Invalid date format or error: {e}. Skipping filter.")
+            return
 
     if not expenses:
-        print("No expenses in this range.")
+        print("No expenses found for this period.")
         return
 
-    report = {}
-    for exp in expenses:
-        cat_name = exp.category.name if exp.category else "Uncategorized"
-        report[cat_name] = report.get(cat_name, 0) + exp.amount
+    total_income = sum(e.amount for e in expenses if e.transaction_type == "income")
+    total_expense = sum(e.amount for e in expenses if e.transaction_type == "expense")
 
-    print("\nSpending by Category:")
-    for cat, total in sorted(report.items(), key=lambda x: x[1], reverse=True):
-        print(f"- {cat}: ${total:.2f}")
+    print("\n--- Spending Report ---")
+    print(f"Total Income: {total_income}")
+    print(f"Total Expense: {total_expense}")
+    print(f"Net: {total_income - total_expense}")
+    print("-----------------------")
 
+
+
+@safe_action
 def manage_categories():
     while True:
         print("\nCategory Management:")
@@ -204,6 +250,10 @@ def manage_categories():
         else:
             print("Invalid choice.")
 
+
+@require_login
+@log_action
+@safe_action
 def edit_delete_transactions(user):
     expenses = user.expenses
     if not expenses:
@@ -240,31 +290,37 @@ def edit_delete_transactions(user):
     else:
         print("Invalid choice.")
 
+
 def main_menu(user):
+    # tuple of (menu text, function to run)
+    menu_options = (
+        ("Add Transaction", lambda: add_transaction(user)),
+        ("View Balance", lambda: view_balance(user)),
+        ("Spending Report", lambda: spending_report(user)),
+        ("Manage Categories", manage_categories),
+        ("Edit/Delete Transactions", lambda: edit_delete_transactions(user)),
+        ("Logout", None)
+    )
+
     while True:
-        print("1. Add Transaction")
-        print("2. View Balance")
-        print("3. Spending Report")
-        print("4. Manage Categories")
-        print("5. Edit/Delete Transactions")
-        print("6. Logout")
+        # print menu dynamically from tuple
+        for i, (label, _) in enumerate(menu_options, start=1):
+            print(f"{i}. {label}")
+
         choice = input("Enter choice: ").strip()
 
-        if choice == "1":
-            add_transaction(user)
-        elif choice == "2":
-            view_balance(user)
-        elif choice == "3":
-            spending_report(user)
-        elif choice == "4":
-            manage_categories()
-        elif choice == "5":
-            edit_delete_transactions(user)
-        elif choice == "6":
-            print(f"\nGoodbye {user.username}, see you next time!\n")
-            break
+        if choice.isdigit() and 1 <= int(choice) <= len(menu_options):
+            label, action = menu_options[int(choice) - 1]
+
+            if action is None:  # Logout option
+                print(f"\nGoodbye {user.username}, see you next time!\n")
+                break
+
+            action()  # call the function
         else:
             print("Invalid choice. Try again.")
+
+
 
 def main():
     while True:
@@ -287,6 +343,7 @@ def main():
             break
         else:
             print("Invalid choice.")
+
 
 if __name__ == "__main__":
     main()
