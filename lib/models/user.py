@@ -6,10 +6,9 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
-    username = Column(String, unique=True, nullable=False)
-    password = Column(String, nullable=False)
+    username = Column(String(50), unique=True, nullable=False)
+    password = Column(String(255), nullable=False)
 
-    # one user has many expenses
     expenses = relationship("Expense", back_populates="user")
 
     def __repr__(self):

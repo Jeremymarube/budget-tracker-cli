@@ -2,6 +2,7 @@ import sys
 import os
 from datetime import datetime
 import bcrypt
+import getpass
 
 # Am Adding project root so "lib" is recognized
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -53,8 +54,8 @@ def register():
 
     # Ask for password twice
     while True:
-        password = input("Choose a password: ").strip()
-        confirm_password = input("Confirm password: ").strip()
+        password = getpass.getpass("Choose a password: ").strip()
+        confirm_password = getpass.getpass("Confirm password: ").strip()
         
         if password != confirm_password:
             print("Passwords do not match. Try again.")
@@ -76,7 +77,7 @@ def register():
 @safe_action
 def login():
     username = input("Username: ").strip()
-    password = input("Password: ").strip()
+    password = getpass.getpass("Password: ").strip()
     
     # filtering by username
     user = session.query(User).filter_by(username=username).first()
@@ -312,11 +313,11 @@ def main_menu(user):
         if choice.isdigit() and 1 <= int(choice) <= len(menu_options):
             label, action = menu_options[int(choice) - 1]
 
-            if action is None:  # Logout option
+            if action is None:  # Loginout option
                 print(f"\nGoodbye {user.username}, see you next time!\n")
                 break
 
-            action()  # call the function
+            action()  # calling the function
         else:
             print("Invalid choice. Try again.")
 
