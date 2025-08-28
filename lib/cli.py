@@ -60,7 +60,7 @@ def register():
         if password != confirm_password:
             print("Passwords do not match. Try again.")
         elif len(password) < 4: 
-            print("Password too short. Must be at least 4 characters.")
+            print("Password too short. Must be at least 4 characters. Please try again")
         else:
             break
 
@@ -87,7 +87,7 @@ def login():
         print(f"\nHello {username}, welcome back!\n")
         return user
     else:
-        print("Invalid credentials!")
+        print("Invalid credentials! Please try again.")
         return None
 
 
@@ -117,7 +117,7 @@ def add_transaction(user):
     try:
         amount = float(input("Enter amount: "))
     except ValueError:
-        print("Invalid amount.")
+        print("Invalid amount. Please enter a valid number.")
         return
 
     type_ = input("Type (income/expense): ").strip().lower()
@@ -130,7 +130,7 @@ def add_transaction(user):
         try:
             trans_date = datetime.strptime(date_input, "%Y-%m-%d")
         except ValueError:
-            print("Invalid date format. Using today.")
+            print("Invalid date format. Please use YYYY-MM-DD format (e.g., 2024-03-15). Using today's date instead.")
             trans_date = datetime.now()
     else:
         trans_date = datetime.now()
@@ -159,9 +159,6 @@ def view_balance(user):
 
 
 @require_login
-@log_action
-@log_action
-
 @log_action
 def spending_report(user):
     print("Filter by date? (y/n): ", end="")
